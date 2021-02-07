@@ -1,3 +1,4 @@
+import argparse
 import re
 import stat
 import tarfile
@@ -111,10 +112,9 @@ class Dm(object):
                 # Permissions should be >=0555 and <=0775
                 file_mode = oct(stat.S_IMODE(f.stat().st_mode))
                 if file_mode < oct(0o0555) or file_mode > oct(0o0775):
-                    print(
-                        f"invalid permissions on {f.name}. have {int(file_mode, base=8)}, should be >=0555 and <=0775"
+                    raise Exception(
+                        f'Invalid permissions on file "{f.name}". Have {int(file_mode, base=8)}, should be >=0555 and <=0775'
                     )
-                    raise Exception("invalid file permissions")
 
                 # Add the files to the root of the archive
                 tarf.add(f.as_posix(), arcname=f.name)
@@ -131,8 +131,11 @@ class Dm(object):
         # Parse the control file
         control_data = {}
         for file_line in control_file.read_text().splitlines():
-            x, y = file_line.split(":")
-            control_data[x.strip().lower()] = y.strip()
+            components = file_line.split(":")
+            if len(components) < 2:
+                continue
+            fieldname = components[0].strip().lower()
+            control_data[fieldname] = components[1].strip()
 
         # Check to see if the requires fields are present (ignoring case)
         for key in ["package", "version", "architecture"]:
@@ -168,3 +171,34 @@ class Dm(object):
                 relative_path = f.relative_to(directory)
                 tarf.add(f.as_posix(), arcname=f"/{relative_path.as_posix()}")
         return data_archive
+
+
+if __name__ == "__main__":
+
+    args = argparse.ArgumentParser()
+    args.add_argument("-z", type=int, action="store", dest="compresslevel", default=9, help="Compression level (0-9)")
+    args.add_argument(
+        "-Z",
+        action="store",
+        dest="compression",
+        default="lzma",
+        choices=["lzma", "gz", "bz2"],
+        help="Compression type (lzma, gz, bz2)",
+    )
+    args.add_argument("directory", type=str, action="store", help="The directory to package")
+    args.add_argument("package", type=str, action="store", help="Output package")
+
+    parsed_args = args.parse_args()
+
+    compression_type = {
+        "lzma": CompressionType.LZMA,
+        "gz": CompressionType.GZIP,
+        "bz2": CompressionType.BZIP2,
+    }[parsed_args.compression]
+
+    Dm.build_package(
+        in_directory=parsed_args.directory,
+        destination=parsed_args.package,
+        compression=compression_type,
+        compression_level=parsed_args.compresslevel,
+    )

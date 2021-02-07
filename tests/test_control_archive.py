@@ -88,7 +88,7 @@ class TestControlArchive:
             with pytest.raises(Exception) as exc_info:
                 Dm._build_control_archive(staging)
             # An exception is raised due to invalid file permissions
-            assert str(exc_info.value) == "invalid file permissions"
+            assert 'Invalid permissions on file "control"' in str(exc_info.value)
 
     def test_control_archive__bad_permissions__low(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -106,7 +106,7 @@ class TestControlArchive:
             with pytest.raises(Exception) as exc_info:
                 Dm._build_control_archive(staging)
             # An exception is raised due to invalid file permissions
-            assert str(exc_info.value) == "invalid file permissions"
+            assert 'Invalid permissions on file "control"' in str(exc_info.value)
 
     def test_control_archive__invalid_package(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
