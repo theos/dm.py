@@ -2,11 +2,23 @@ import tarfile
 import time
 from io import BytesIO
 from pathlib import Path
+from typing import BinaryIO
+from enum import Enum
+
+
+class CompressionType(Enum):
+    """Compression types for the data archive"""
+
+    LZMA = "xz"
+    GZIP = "gz"
+    BZIP2 = "bz2"
 
 
 class Dm(object):
+    """Minimal dpkg-deb clone"""
+
     @classmethod
-    def validate(cls, directory: Path) -> None:
+    def validate_staged_package(cls, directory: Path) -> None:
         # There needs to be a directory called DEBIAN in the root of the provided path
         control_directory = directory / "DEBIAN"
         if not control_directory.exists() or not control_directory.is_dir():
@@ -20,7 +32,7 @@ class Dm(object):
         # TODO check file permissions
 
     @classmethod
-    def add_file_to_archive(cls, name: str, data: BytesIO, archive) -> None:
+    def add_file_to_archive(cls, name: str, data: BytesIO, archive: BinaryIO) -> None:
         """Add a file into an AR archive"""
         # Write the file name
         filename = name.ljust(16, " ").encode("utf-8")
@@ -54,28 +66,23 @@ class Dm(object):
             archive.write(b"\n")
 
     @classmethod
-    def build_package(cls, in_directory: str, destination: str) -> None:
-        """Build a deb file from the contents of the provided directory"""
-        # Validate the provided path
-        in_path = Path(in_directory)
-        Dm.validate(in_path)
-
-        # Build the debian-archive file. It contains a single line giving the package format version number
-        debian_bin = BytesIO()
-        debian_bin.write(b"2.0")
-
-        # Build the control archive
+    def _build_control_archive(cls, directory: Path) -> BytesIO:
+        """Compress the control archive (DEBIAN) into a gzipped tarball"""
         control_tar = BytesIO()
-        control_directory = in_path / "DEBIAN"
+        control_directory = directory / "DEBIAN"
         with tarfile.open(fileobj=control_tar, mode="w:gz") as tarf:
             for f in control_directory.iterdir():
                 # Add the files to the root of the archive
                 tarf.add(f.as_posix(), arcname=f.name)
+        return control_tar
 
-        # Build the data archive
+    @classmethod
+    def _build_data_archive(cls, directory: Path, compression: CompressionType) -> BytesIO:
+        """Compress the package's files"""
         data_archive = BytesIO()
-        with tarfile.open(fileobj=data_archive, mode="w:xz") as tarf:
-            for f in in_path.glob("**/*"):
+        tarmode = f"w:{compression.value}"
+        with tarfile.open(fileobj=data_archive, mode=tarmode) as tarf:
+            for f in directory.glob("**/*"):
                 # Exclude all directories and anything within DEBIAN/
                 if f.is_dir() or f.parent.name == "DEBIAN":
                     continue
@@ -85,16 +92,35 @@ class Dm(object):
                     continue
 
                 # Add the file to the archive, using a path relative to the input directory
-                relative_path = f.relative_to(in_path)
+                relative_path = f.relative_to(directory)
                 tarf.add(f.as_posix(), arcname=f"/{relative_path.as_posix()}")
+        return data_archive
 
+    @classmethod
+    def build_package(
+        cls, in_directory: str, destination: str, compression: CompressionType = CompressionType.LZMA
+    ) -> None:
+        """Build a deb file from the contents of the provided directory"""
+        # Validate the provided path
+        in_path = Path(in_directory)
+        Dm.validate_staged_package(in_path)
+
+        # Build the debian-archive file. It contains a single line giving the package format version number
+        debian_bin = BytesIO(b"2.0")
+
+        # Build the control archive
+        control_tar = Dm._build_control_archive(in_path)
+
+        # Build the data archive
+        data_archive = Dm._build_data_archive(in_path, compression)
+
+        # Build the deb file
         with open(destination, mode="wb") as debf:
-            # Write header
+            # Magic
             debf.write(b"!<arch>\n")
             # Add files
             Dm.add_file_to_archive("debian-binary", debian_bin, debf)
             Dm.add_file_to_archive("control.tar.gz", control_tar, debf)
-            Dm.add_file_to_archive("data.tar.xz", data_archive, debf)
-
-
-Dm.build_package("/Users/user/Desktop/carplay-cast/.theos/_", "final.deb")
+            # Data archive suffix depends on compression type
+            data_archive_name = f"data.tar.{compression.value}"
+            Dm.add_file_to_archive(data_archive_name, data_archive, debf)

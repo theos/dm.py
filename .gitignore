@@ -1,0 +1,6 @@
+__pycache__
+*.deb
+*.pyc
+.pytest_cache
+.vscode
+.mypy_cache
