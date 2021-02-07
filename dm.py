@@ -176,6 +176,7 @@ class Dm(object):
 if __name__ == "__main__":
 
     args = argparse.ArgumentParser()
+    args.add_argument("-b", action="store_true")
     args.add_argument("-z", type=int, action="store", dest="compresslevel", default=9, help="Compression level (0-9)")
     args.add_argument(
         "-Z",
