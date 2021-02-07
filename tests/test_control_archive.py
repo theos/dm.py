@@ -16,7 +16,7 @@ class TestControlArchive:
 
             # And a control file
             control_file = debian_dir / "control"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
 
             # When the control archive is created
             control_archive = Dm._build_control_archive(staging)
@@ -35,7 +35,7 @@ class TestControlArchive:
                 ctrl_file = tarf.extractfile(tarf.getmember("control"))
                 assert ctrl_file is not None
                 # And the file has the correct contents
-                assert ctrl_file.read() == b"test123"
+                assert ctrl_file.read() == b"Package: com.test\nVersion: 1.0\nArchitecture: arm64"
 
     def test_control_archive_debian_scripts(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -46,7 +46,7 @@ class TestControlArchive:
 
             # And a control file
             control_file = debian_dir / "control"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
 
             # And a postinst and preinst
             postinst = debian_dir / "postinst"
@@ -81,7 +81,7 @@ class TestControlArchive:
 
             # And a control file with an invalid mode
             control_file = debian_dir / "control"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
             control_file.chmod(777)
 
             # When the control archive is created
@@ -99,7 +99,7 @@ class TestControlArchive:
 
             # And a control file with an invalid mode
             control_file = debian_dir / "control"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
             control_file.chmod(550)
 
             # When the control archive is created
@@ -107,3 +107,37 @@ class TestControlArchive:
                 Dm._build_control_archive(staging)
             # An exception is raised due to invalid file permissions
             assert str(exc_info.value) == "invalid file permissions"
+
+    def test_control_archive__invalid_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            staging = Path(tempdir)
+            # Given a valid control directory
+            debian_dir = staging / "DEBIAN"
+            debian_dir.mkdir()
+
+            # And a control file with an invalid mode
+            control_file = debian_dir / "control"
+            control_file.write_bytes(b"Package: com.testINVALID\nVersion: 1.0\nArchitecture: arm64")
+
+            # When the control archive is created
+            with pytest.raises(Exception) as exc_info:
+                Dm._build_control_archive(staging)
+            # An exception is raised
+            assert str(exc_info.value) == "Package name has characters that aren't lowercase alphanums or '-+.'."
+
+    def test_control_archive__invalid_version(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            staging = Path(tempdir)
+            # Given a valid control directory
+            debian_dir = staging / "DEBIAN"
+            debian_dir.mkdir()
+
+            # And a control file with an invalid mode
+            control_file = debian_dir / "control"
+            control_file.write_bytes(b"Package: com.test\nVersion: womp\nArchitecture: arm64")
+
+            # When the control archive is created
+            with pytest.raises(Exception) as exc_info:
+                Dm._build_control_archive(staging)
+            # An exception is raised
+            assert str(exc_info.value) == "Package version womp doesn't contain any digits."

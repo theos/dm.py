@@ -1,3 +1,4 @@
+import re
 import stat
 import tarfile
 import time
@@ -117,7 +118,34 @@ class Dm(object):
 
                 # Add the files to the root of the archive
                 tarf.add(f.as_posix(), arcname=f.name)
+
+        # Parse the control file. This happens after the permissions checks, because doing this requires the ability to read the file.
+        # If the file cannot be read, the desired exception is invalid file permissions
+        cls._validate_control_file(control_file)
+
         return control_tar
+
+    @classmethod
+    def _validate_control_file(cls, control_file: Path) -> None:
+        """Validate the contents of the control file"""
+        # Parse the control file
+        control_data = {}
+        for file_line in control_file.read_text().splitlines():
+            x, y = file_line.split(":")
+            control_data[x.strip().lower()] = y.strip()
+
+        # Check to see if the requires fields are present (ignoring case)
+        for key in ["package", "version", "architecture"]:
+            if key not in control_data:
+                raise Exception(f"control file is missing {key}")
+
+        # Validate package name
+        if re.search(r"[^a-z0-9+-.]", control_data["package"]):
+            raise Exception("Package name has characters that aren't lowercase alphanums or '-+.'.")
+
+        # Validate version
+        if not re.search(r"[0-9]", control_data["version"]):
+            raise Exception(f"Package version {control_data['version']} doesn't contain any digits.")
 
     @classmethod
     def _build_data_archive(cls, directory: Path, compression: CompressionType, compression_level: int = 9) -> BytesIO:
@@ -126,7 +154,7 @@ class Dm(object):
         # LZMA uses a different name for "compression level" (wtf). "preset" for lzma, 'compresslevel" for everything else
         compression_argname = "preset" if compression is CompressionType.LZMA else "compresslevel"
         tarmode = f"w:{compression.value}"
-        with tarfile.open(fileobj=data_archive, mode=tarmode, **{compression_argname: compression_level}) as tarf:
+        with tarfile.open(fileobj=data_archive, mode=tarmode, **{compression_argname: compression_level}) as tarf:  # type: ignore
             for f in directory.glob("**/*"):
                 # Exclude all directories and anything within DEBIAN/
                 if f.is_dir() or f.parent.name == "DEBIAN":

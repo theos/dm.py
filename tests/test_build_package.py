@@ -15,7 +15,7 @@ class TestDmPackage:
             debian_dir = staging / "DEBIAN"
             debian_dir.mkdir()
             control_file = debian_dir / "control"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
 
             # And some valid test data
             some_file = staging / "package_file"
@@ -47,7 +47,7 @@ class TestDmPackage:
             debian_dir = staging / "DEBIAN"
             debian_dir.mkdir()
             control_file = debian_dir / "control"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
 
             # And some valid test data
             some_file = staging / "package_file"
@@ -79,7 +79,7 @@ class TestDmPackage:
             debian_dir = staging / "DEBIAN"
             debian_dir.mkdir()
             control_file = debian_dir / "control"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
 
             # And some valid test data
             some_file = staging / "package_file"
@@ -131,7 +131,7 @@ class TestDmPackage:
 
             # With no control file
             control_file = debian_dir / "c4ntrol"
-            control_file.write_bytes(b"test123")
+            control_file.write_bytes(b"Package: com.test\nVersion: 1.0\nArchitecture: arm64")
 
             # When I build a deb
             with pytest.raises(Exception) as exc_info:
