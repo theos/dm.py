@@ -182,7 +182,7 @@ if __name__ == "__main__":
         "-Z",
         action="store",
         dest="compression",
-        default="lzma",
+        default="gz",
         choices=["lzma", "gz", "bz2"],
         help="Compression type (lzma, gz, bz2)",
     )
