@@ -27,7 +27,7 @@ class Dm(object):
         cls,
         in_directory: str,
         destination: str,
-        compression: CompressionType = CompressionType.LZMA,
+        compression: CompressionType = CompressionType.GZIP,
         compression_level: int = 9,
     ) -> None:
         """Build a deb file from the contents of the provided directory, using the specifed compression algorithm"""

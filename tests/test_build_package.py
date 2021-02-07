@@ -23,7 +23,7 @@ class TestDmPackage:
 
             # When I build a deb
             destination = staging / "test.deb"
-            Dm.build_package(tempdir, destination.as_posix())
+            Dm.build_package(tempdir, destination.as_posix(), compression=CompressionType.LZMA)
 
             # The destination file is created
             assert destination.exists()
