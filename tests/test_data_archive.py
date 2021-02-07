@@ -15,7 +15,7 @@ class TestDataArchive:
                 f.write_bytes(b"file data 123")
 
             # When an lzma data archive is created
-            data_archive = Dm._build_data_archive(staging, CompressionType.LZMA)
+            data_archive = Dm._build_data_archive(staging, CompressionType.LZMA, 9)
 
             # Archive data is returned
             archive_data = data_archive.getvalue()
@@ -32,7 +32,7 @@ class TestDataArchive:
                 assert "test2" in tarf.getnames()
                 assert "test3" in tarf.getnames()
 
-    def test_build_data_archive__bz2(self) -> None:
+    def test_build_data_archive__bz2__compression_9(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
             staging = Path(tempdir)
             # Given some test files
@@ -41,14 +41,40 @@ class TestDataArchive:
                 f.write_bytes(b"file data 123")
 
             # When an lzma data archive is created
-            data_archive = Dm._build_data_archive(staging, CompressionType.BZIP2)
+            data_archive = Dm._build_data_archive(staging, CompressionType.BZIP2, 9)
 
             # Archive data is returned
             archive_data = data_archive.getvalue()
             assert len(archive_data) > 10
 
-            # And its bz2 data
+            # And its bz2 data with compression level 9
             assert archive_data[0:4] == b"BZh9"
+
+            # When the archive is decompressed
+            data_archive.seek(0)
+            with tarfile.open(fileobj=data_archive, mode="r:bz2") as tarf:
+                # It contains all of the expected files
+                assert "test1" in tarf.getnames()
+                assert "test2" in tarf.getnames()
+                assert "test3" in tarf.getnames()
+
+    def test_build_data_archive__bz2__compression_1(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            staging = Path(tempdir)
+            # Given some test files
+            for fname in ["test1", "test2", "test3"]:
+                f = staging / fname
+                f.write_bytes(b"file data 123")
+
+            # When an lzma data archive is created
+            data_archive = Dm._build_data_archive(staging, CompressionType.BZIP2, 1)
+
+            # Archive data is returned
+            archive_data = data_archive.getvalue()
+            assert len(archive_data) > 10
+
+            # And its bz2 data with compression level 1
+            assert archive_data[0:4] == b"BZh1"
 
             # When the archive is decompressed
             data_archive.seek(0)
@@ -67,7 +93,7 @@ class TestDataArchive:
                 f.write_bytes(b"file data 123")
 
             # When an lzma data archive is created
-            data_archive = Dm._build_data_archive(staging, CompressionType.GZIP)
+            data_archive = Dm._build_data_archive(staging, CompressionType.GZIP, 9)
 
             # Archive data is returned
             archive_data = data_archive.getvalue()

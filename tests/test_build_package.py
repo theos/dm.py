@@ -144,7 +144,7 @@ class TestDmPackage:
             # And no output file is created
             assert destination.exists() is False
 
-    def test_add_file_to_archive__even_bytes(self) -> None:
+    def test__add_file_to_archive__even_bytes(self) -> None:
         # Given a file with some test data
         test_file = BytesIO()
         test_file_data = b"test1234"
@@ -154,7 +154,7 @@ class TestDmPackage:
         ar_archive = BytesIO()
 
         # When the file is added to the archive
-        Dm.add_file_to_archive("testfile", test_file, ar_archive)
+        Dm._add_file_to_archive("testfile", test_file, ar_archive)
         # Data was written to the archive
         data = ar_archive.getvalue()
         assert data is not None
@@ -178,7 +178,7 @@ class TestDmPackage:
         # And the file data is correct
         assert data[60:] == b"test1234"
 
-    def test_add_file_to_archive__odd_bytes(self) -> None:
+    def test__add_file_to_archive__odd_bytes(self) -> None:
         # Given a file with an odd-number amount of test data
         test_file = BytesIO()
         test_file_data = b"test12345"
@@ -188,7 +188,7 @@ class TestDmPackage:
         ar_archive = BytesIO()
 
         # When the file is added to the archive
-        Dm.add_file_to_archive("testfile", test_file, ar_archive)
+        Dm._add_file_to_archive("testfile", test_file, ar_archive)
         # Data was written to the archive
         data = ar_archive.getvalue()
         assert data is not None

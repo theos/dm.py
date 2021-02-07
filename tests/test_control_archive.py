@@ -2,6 +2,7 @@ import tarfile
 import tempfile
 from pathlib import Path
 
+import pytest
 from dm import Dm
 
 
@@ -19,7 +20,7 @@ class TestControlArchive:
 
             # When the control archive is created
             control_archive = Dm._build_control_archive(staging)
-            control_archive.flush()
+
             # Archive data is returned
             archive_data = control_archive.getvalue()
             assert len(archive_data) > 10
@@ -70,3 +71,39 @@ class TestControlArchive:
                 assert "control" in tarf.getnames()
                 assert "preinst" in tarf.getnames()
                 assert "postinst" in tarf.getnames()
+
+    def test_control_archive__bad_permissions__high(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            staging = Path(tempdir)
+            # Given a valid control directory
+            debian_dir = staging / "DEBIAN"
+            debian_dir.mkdir()
+
+            # And a control file with an invalid mode
+            control_file = debian_dir / "control"
+            control_file.write_bytes(b"test123")
+            control_file.chmod(777)
+
+            # When the control archive is created
+            with pytest.raises(Exception) as exc_info:
+                Dm._build_control_archive(staging)
+            # An exception is raised due to invalid file permissions
+            assert str(exc_info.value) == "invalid file permissions"
+
+    def test_control_archive__bad_permissions__low(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            staging = Path(tempdir)
+            # Given a valid control directory
+            debian_dir = staging / "DEBIAN"
+            debian_dir.mkdir()
+
+            # And a control file with an invalid mode
+            control_file = debian_dir / "control"
+            control_file.write_bytes(b"test123")
+            control_file.chmod(550)
+
+            # When the control archive is created
+            with pytest.raises(Exception) as exc_info:
+                Dm._build_control_archive(staging)
+            # An exception is raised due to invalid file permissions
+            assert str(exc_info.value) == "invalid file permissions"
